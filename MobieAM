@@ -1,12 +1,12 @@
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 
 local LocalPlayer = Players.LocalPlayer
+repeat wait() until LocalPlayer.Character
 local Camera = workspace.CurrentCamera
 
--- CONFIG
 local Config = {
     Enabled = false,
     AimPart = "HumanoidRootPart",
@@ -55,7 +55,7 @@ local function AimAt(player)
     local pos = part.Position
 
     if Config.UseSensitivity then
-        local speedFactor = 0.4 -- ปรับความไวให้เล็งเร็วขึ้น
+        local speedFactor = 0.4
         TweenService:Create(Camera, TweenInfo.new((Config.Sensitivity / 100) * speedFactor), {
             CFrame = CFrame.new(Camera.CFrame.Position, pos)
         }):Play()
@@ -74,14 +74,12 @@ _G.AimbotLoop = RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Highlight
 local function AddHighlight(player)
     if player == LocalPlayer or Highlights[player] then return end
     local function create()
         local char = player.Character
         if char and not Highlights[player] then
             local hl = Instance.new("Highlight")
-            hl.Name = "AimbotHighlight"
             hl.FillColor = Color3.fromRGB(255, 255, 0)
             hl.OutlineColor = Color3.fromRGB(255, 255, 255)
             hl.FillTransparency = 0.5
@@ -106,14 +104,16 @@ for _, p in pairs(Players:GetPlayers()) do AddHighlight(p) end
 Players.PlayerAdded:Connect(AddHighlight)
 Players.PlayerRemoving:Connect(RemoveHighlight)
 
--- UI
-
-local Gui = Instance.new("ScreenGui", game.CoreGui)
+-- UI สร้าง Gui
+local Gui = Instance.new("ScreenGui")
 Gui.Name = "XenoAimbotUI"
+Gui.IgnoreGuiInset = true
+Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 Gui.ResetOnSpawn = false
+Gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
 local Frame = Instance.new("Frame", Gui)
-Frame.Size = UDim2.new(0, 320, 0, 200)
+Frame.Size = UDim2.new(0, 320, 0, 220)
 Frame.Position = UDim2.new(0.5, -160, 0.5, -100)
 Frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 Frame.BackgroundTransparency = 0.35
@@ -125,7 +125,7 @@ Instance.new("UICorner", Frame).CornerRadius = UDim.new(0.08, 0)
 local Title = Instance.new("TextLabel", Frame)
 Title.Size = UDim2.new(1, 0, 0, 40)
 Title.BackgroundTransparency = 1
-Title.Text = "🎯 Aimbot Pro"
+Title.Text = "🎯 Xeno Aimbot Pro"
 Title.TextColor3 = Color3.fromRGB(180, 120, 255)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 18
@@ -141,12 +141,6 @@ ExitBtn.TextColor3 = Color3.new(1,1,1)
 ExitBtn.BorderSizePixel = 0
 Instance.new("UICorner", ExitBtn).CornerRadius = UDim.new(1,0)
 
-local ContentFrame = Instance.new("Frame", Frame)
-ContentFrame.Name = "Content"
-ContentFrame.Size = UDim2.new(1, 0, 1, -40)
-ContentFrame.Position = UDim2.new(0, 0, 0, 40)
-ContentFrame.BackgroundTransparency = 1
-
 local MinBtn = Instance.new("TextButton", Frame)
 MinBtn.Size = UDim2.new(0, 28, 0, 28)
 MinBtn.Position = UDim2.new(1, -70, 0, 6)
@@ -158,24 +152,27 @@ MinBtn.TextSize = 14
 MinBtn.BorderSizePixel = 0
 Instance.new("UICorner", MinBtn).CornerRadius = UDim.new(1, 0)
 
+local ContentFrame = Instance.new("Frame", Frame)
+ContentFrame.Name = "Content"
+ContentFrame.Size = UDim2.new(1, 0, 1, -40)
+ContentFrame.Position = UDim2.new(0, 0, 0, 40)
+ContentFrame.BackgroundTransparency = 1
+
 local isMinimized = false
 local originalSize = Frame.Size
 
 MinBtn.MouseButton1Click:Connect(function()
 	isMinimized = not isMinimized
-	local targetSize = isMinimized and UDim2.new(originalSize.X.Scale, originalSize.X.Offset, 0, 40) or originalSize
 	ContentFrame.Visible = not isMinimized
-	TweenService:Create(Frame, TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
-		Size = targetSize
+	TweenService:Create(Frame, TweenInfo.new(0.25), {
+		Size = isMinimized and UDim2.new(originalSize.X.Scale, originalSize.X.Offset, 0, 40) or originalSize
 	}):Play()
 end)
 
 ExitBtn.MouseButton1Click:Connect(function()
 	Gui:Destroy()
 	if _G.AimbotLoop then _G.AimbotLoop:Disconnect() end
-	for _, hl in pairs(Highlights) do
-		if hl then hl:Destroy() end
-	end
+	for _, hl in pairs(Highlights) do if hl then hl:Destroy() end end
 end)
 
 local function createToggle(textLabel, yPos, default, callback)
@@ -184,17 +181,14 @@ local function createToggle(textLabel, yPos, default, callback)
 	container.Position = UDim2.new(0.05, 0, 0, yPos)
 	container.BackgroundTransparency = 1
 
-	local label = Instance.new("TextLabel", container) 
-    label.Size = UDim2.new(1, 0, 0, 20)
-    label.Position = UDim2.new(0.5, 0, 0, 0)
-    label.AnchorPoint = Vector2.new(0.5, 0)
-    label.Text = textLabel .. ": " .. tostring(default)
-    label.Font = Enum.Font.Gotham
-    label.TextSize = 14
-    label.TextColor3 = Color3.new(1, 1, 1)
-    label.BackgroundTransparency = 1
-    label.TextXAlignment = Enum.TextXAlignment.Center
-
+	local label = Instance.new("TextLabel", container)
+	label.Size = UDim2.new(1, 0, 1, 0)
+	label.Text = textLabel
+	label.Font = Enum.Font.Gotham
+	label.TextSize = 14
+	label.TextColor3 = Color3.new(1, 1, 1)
+	label.BackgroundTransparency = 1
+	label.TextXAlignment = Enum.TextXAlignment.Left
 
 	local toggle = Instance.new("TextButton", container)
 	toggle.Size = UDim2.new(0, 50, 0, 24)
@@ -213,17 +207,15 @@ local function createToggle(textLabel, yPos, default, callback)
 
 	local state = default
 	local function update()
-	if state then
-		toggle.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-		circle:TweenPosition(UDim2.new(1, -22, 0, 2), "Out", "Sine", 0.15, true)
-	else
-		toggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-		circle:TweenPosition(UDim2.new(0, 2, 0, 2), "Out", "Sine", 0.15, true)
+		if state then
+			toggle.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+			circle:TweenPosition(UDim2.new(1, -22, 0, 2), "Out", "Sine", 0.15, true)
+		else
+			toggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+			circle:TweenPosition(UDim2.new(0, 2, 0, 2), "Out", "Sine", 0.15, true)
+		end
+		if callback then callback(state) end
 	end
-	-- ❌ ไม่ต้องแสดง true/false
-	label.Text = textLabel
-	if callback then callback(state) end
-end
 
 	toggle.MouseButton1Click:Connect(function()
 		state = not state
@@ -233,6 +225,7 @@ end
 	update()
 end
 
+-- Toggle ทั้งหมด
 createToggle("เปิดโหมด Aimbot", 10, false, function(on)
 	Config.Enabled = on
 end)
@@ -247,15 +240,11 @@ createToggle("เปิดโหมด Highlight", 60, true, function(on)
 end)
 
 local parts = {"HumanoidRootPart", "Head"}
-local partIndex = table.find(parts, Config.AimPart) or 1
 createToggle("ปรับมุมล็อก หัว/ตัว", 110, Config.AimPart == "HumanoidRootPart", function(state)
-	partIndex = state and 1 or 2
-	Config.AimPart = parts[partIndex]
+	Config.AimPart = state and parts[1] or parts[2]
 end)
--- เพิ่ม Slider ปรับความไวการเล็ง
--- [อยู่ในส่วนล่างของไฟล์หลังจาก toggle ทั้งหมด]
 
--- ✅ Slider ความไวแบบมีตัวจับวงกลมลาก
+-- Slider ความไวรองรับมือถือ
 local function createSlider(textLabel, yPos, minVal, maxVal, default, callback)
 	local container = Instance.new("Frame", ContentFrame)
 	container.Size = UDim2.new(0.9, 0, 0, 60)
@@ -264,14 +253,14 @@ local function createSlider(textLabel, yPos, minVal, maxVal, default, callback)
 
 	local label = Instance.new("TextLabel", container)
 	label.Size = UDim2.new(1, 0, 0, 20)
+	label.Position = UDim2.new(0.5, 0, 0, 0)
+	label.AnchorPoint = Vector2.new(0.5, 0)
 	label.Text = textLabel .. ": " .. tostring(default)
 	label.Font = Enum.Font.Gotham
 	label.TextSize = 14
 	label.TextColor3 = Color3.new(1, 1, 1)
 	label.BackgroundTransparency = 1
 	label.TextXAlignment = Enum.TextXAlignment.Center
-	label.Position = UDim2.new(0.5, 0, 0, 0)
-    label.AnchorPoint = Vector2.new(0.5, 0)
 
 	local sliderBack = Instance.new("Frame", container)
 	sliderBack.Position = UDim2.new(0, 0, 0, 30)
@@ -284,7 +273,6 @@ local function createSlider(textLabel, yPos, minVal, maxVal, default, callback)
 	fill.Size = UDim2.new((default - minVal) / (maxVal - minVal), 0, 1, 0)
 	fill.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
 	fill.BorderSizePixel = 0
-	fill.Name = "Fill"
 	Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
 
 	local knob = Instance.new("Frame", sliderBack)
@@ -292,9 +280,7 @@ local function createSlider(textLabel, yPos, minVal, maxVal, default, callback)
 	knob.Position = UDim2.new((default - minVal) / (maxVal - minVal), -6, 0.5, -6)
 	knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 	knob.BorderSizePixel = 0
-	knob.Name = "Knob"
 	Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
-	knob.ZIndex = 3
 
 	local dragging = false
 
@@ -308,19 +294,19 @@ local function createSlider(textLabel, yPos, minVal, maxVal, default, callback)
 	end
 
 	sliderBack.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 			dragging = true
 		end
 	end)
 
 	sliderBack.InputEnded:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 			dragging = false
 		end
 	end)
 
-	game:GetService("UserInputService").InputChanged:Connect(function(input)
-		if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+	UserInputService.InputChanged:Connect(function(input)
+		if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
 			local relX = input.Position.X - sliderBack.AbsolutePosition.X
 			local percent = relX / sliderBack.AbsoluteSize.X
 			local val = minVal + (maxVal - minVal) * percent
@@ -331,7 +317,6 @@ local function createSlider(textLabel, yPos, minVal, maxVal, default, callback)
 	update(default)
 end
 
--- 🟢 เรียกใช้งาน
 createSlider("ความไวในการเล็ง", 160, 1, 100, Config.Sensitivity, function(val)
 	Config.Sensitivity = val
 end)
